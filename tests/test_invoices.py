@@ -93,10 +93,10 @@ class InvoiceTests(unittest.TestCase):
             self.assertEqual(document.tables[2].cell(4, 1).text, "$130.00")
             self.assertEqual(document.tables[2].cell(1, 1).text, "$0.00")
             self.assertEqual(document.tables[2].cell(3, 1).text, "-$0.00")
-            self.assertIn(
-                "Payment due by May 31, 2026",
-                "\n".join(paragraph.text for paragraph in document.paragraphs),
+            invoice_paragraphs = "\n".join(
+                paragraph.text for paragraph in document.paragraphs
             )
+            self.assertNotIn("Payment due by", invoice_paragraphs)
             self.assertIn(
                 "Please remit payment through PayPal to jameshardy1@gmail.com",
                 "\n".join(

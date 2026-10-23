@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import calendar
 from datetime import date, datetime
+from decimal import Decimal
 from pathlib import Path
 from queue import Empty, SimpleQueue
 import re
@@ -155,7 +156,11 @@ class TimeTrackerApp:
             "turns",
             "pay",
         )
-        self.session_table = ttk.Treeview(history, columns=columns, show="headings")
+        table_frame = ttk.Frame(history)
+        table_frame.pack(fill="both", expand=True)
+        self.session_table = ttk.Treeview(
+            table_frame, columns=columns, show="headings"
+        )
         headings = {
             "project": ("Project", 130),
             "client": ("Client", 120),
@@ -171,11 +176,25 @@ class TimeTrackerApp:
             self.session_table.heading(column, text=label)
             self.session_table.column(column, width=width, anchor="w")
         scrollbar = ttk.Scrollbar(
-            history, orient="vertical", command=self.session_table.yview
+            table_frame, orient="vertical", command=self.session_table.yview
         )
         self.session_table.configure(yscrollcommand=scrollbar.set)
         self.session_table.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+        totals_frame = ttk.Frame(history)
+        totals_frame.pack(fill="x", pady=(8, 0))
+        self.monthly_hours_total = tk.StringVar(value="Total hours worked: 0h 0m")
+        self.monthly_pay_total = tk.StringVar(value="Total pay: $0.00")
+        ttk.Label(
+            totals_frame,
+            textvariable=self.monthly_hours_total,
+            font=("TkDefaultFont", 10, "bold"),
+        ).pack(side="left")
+        ttk.Label(
+            totals_frame,
+            textvariable=self.monthly_pay_total,
+            font=("TkDefaultFont", 10, "bold"),
+        ).pack(side="right")
 
     def _reload_projects(self) -> None:
         self.projects = self.storage.load_projects()
@@ -298,10 +317,17 @@ class TimeTrackerApp:
     def _reload_sessions(self) -> None:
         for item in self.session_table.get_children():
             self.session_table.delete(item)
-        for session in self.storage.load_sessions():
-            if not session.is_complete:
-                continue
+        sessions = [
+            session
+            for session in self.storage.load_sessions()
+            if session.is_complete
+        ]
+        total_minutes = 0
+        total_pay = Decimal("0.00")
+        for session in sessions:
             hours, minutes = session.total_hours_and_minutes
+            total_minutes += hours * 60 + minutes
+            total_pay += session.total_pay
             self.session_table.insert(
                 "",
                 "end",
@@ -317,6 +343,11 @@ class TimeTrackerApp:
                     str(session.total_pay),
                 ),
             )
+        total_hours, remaining_minutes = divmod(total_minutes, 60)
+        self.monthly_hours_total.set(
+            f"Total hours worked: {total_hours}h {remaining_minutes}m"
+        )
+        self.monthly_pay_total.set(f"Total pay: ${total_pay:.2f}")
 
     def _select_project(self, _event: tk.Event[tk.Misc] | None = None) -> None:
         for project in self.projects:

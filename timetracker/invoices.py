@@ -138,9 +138,7 @@ def create_invoice_docx(
 
     for paragraph in document.paragraphs:
         if paragraph.text == "Paid in full by cash. Thank you.":
-            set_paragraph_text(
-                paragraph, f"Payment due by {due_date:%B %d, %Y}. Thank you."
-            )
+            set_paragraph_text(paragraph, "")
         elif paragraph.text.startswith("Website hosting and servicing"):
             set_paragraph_text(paragraph, "")
 
